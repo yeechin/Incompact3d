@@ -240,12 +240,14 @@ contains
   end subroutine preprocessing
   !##################################################################
   !##################################################################
-  subroutine postprocessing(rho1, ux1, uy1, uz1, pp3, phi1, ep1)
+  subroutine postprocessing(rho1, ux1, uy1, uz1, pp3, phi1, ep1, Rx1, Ry1, Rz1, vorx1, vory1, vorz1)
 
     use decomp_2d, only : mytype, xsize, ph1
     use var, only : nzmsize, numscalar, nrhotime, npress, abl_T
 
     real(mytype),dimension(xsize(1),xsize(2),xsize(3)), intent(in) :: ux1, uy1, uz1
+    real(mytype),dimension(xsize(1),xsize(2),xsize(3)), intent(in) :: Rx1, Ry1, Rz1
+    real(mytype),dimension(xsize(1),xsize(2),xsize(3)), intent(in) :: vorx1, vory1, vorz1
     real(mytype),dimension(xsize(1),xsize(2),xsize(3),numscalar), intent(in) :: phi1
     real(mytype),dimension(xsize(1),xsize(2),xsize(3),nrhotime), intent(in) :: rho1
     real(mytype),dimension(xsize(1),xsize(2),xsize(3)), intent(in) :: ep1
@@ -258,15 +260,15 @@ contains
       do j=1,xsize(2) 
         abl_T(:,j,:,1) = phi1(:,j,:,1) + Tstat(j,1)
       enddo
-      call run_postprocessing(rho1, ux1, uy1, uz1, pp3, abl_T, ep1)
+      call run_postprocessing(rho1, ux1, uy1, uz1, pp3, abl_T, ep1, Rx1, Ry1, Rz1, vorx1, vory1, vorz1)
     else
-      call run_postprocessing(rho1, ux1, uy1, uz1, pp3, phi1, ep1)
+      call run_postprocessing(rho1, ux1, uy1, uz1, pp3, phi1, ep1, Rx1, Ry1, Rz1, vorx1, vory1, vorz1)
     endif
 
   end subroutine postprocessing
   !##################################################################
   !##################################################################
-  subroutine run_postprocessing(rho1, ux1, uy1, uz1, pp3, phi1, ep1)
+  subroutine run_postprocessing(rho1, ux1, uy1, uz1, pp3, phi1, ep1, Rx1, Ry1, Rz1, vorx1, vory1, vorz1)
 
     use decomp_2d, only : mytype, xsize, ph1
     use visu, only  : write_snapshot, end_snapshot
@@ -280,6 +282,8 @@ contains
     use probes, only : write_probes
 
     real(mytype),dimension(xsize(1),xsize(2),xsize(3)), intent(in) :: ux1, uy1, uz1
+    real(mytype),dimension(xsize(1),xsize(2),xsize(3)), intent(in) :: Rx1, Ry1, Rz1
+    real(mytype),dimension(xsize(1),xsize(2),xsize(3)), intent(in) :: vorx1, vory1, vorz1
     real(mytype),dimension(xsize(1),xsize(2),xsize(3),numscalar), intent(in) :: phi1
     real(mytype),dimension(xsize(1),xsize(2),xsize(3),nrhotime), intent(in) :: rho1
     real(mytype),dimension(xsize(1),xsize(2),xsize(3)), intent(in) :: ep1
@@ -299,7 +303,7 @@ contains
 
     call postprocess_case(rho1, ux1, uy1, uz1, pp3, phi1, ep1)
 
-    call overall_statistic(ux1, uy1, uz1, phi1, pp3, ep1)
+    call overall_statistic(ux1, uy1, uz1, phi1, pp3, ep1, Rx1, Ry1, Rz1, vorx1, vory1, vorz1)
 
     if (iturbine.ne.0) then 
       call turbine_output()

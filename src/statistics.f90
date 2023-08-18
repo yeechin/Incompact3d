@@ -74,6 +74,18 @@ contains
     use var, only : vwmean
     use var, only : phimean, phiphimean
 
+    use var, only : Rxmean, Rxxmean
+    use var, only : Rymean, Ryymean
+    use var, only : Rzmean, Rzzmean
+    use var, only : Rxymean, Rxzmean
+    use var, only : Ryzmean
+
+    use var, only : vorxmean, vorxxmean
+    use var, only : vorymean, voryymean
+    use var, only : vorzmean, vorzzmean
+    use var, only : vorxymean, vorxzmean
+    use var, only : voryzmean
+
     implicit none
 
     tmean = zero
@@ -91,6 +103,26 @@ contains
       phimean = zero
       phiphimean = zero
     endif
+
+    Rxmean = zero
+    Rxxmean = zero
+    Rymean = zero
+    Ryymean = zero
+    Rzmean = zero
+    Rzzmean = zero
+    Rxymean = zero
+    Rxzmean = zero
+    Ryzmean = zero
+
+    vorxmean = zero
+    vorxxmean = zero
+    vorymean = zero
+    voryymean = zero
+    vorzmean = zero
+    vorzzmean = zero
+    vorxymean = zero
+    vorxzmean = zero
+    voryzmean = zero
 
     call init_statistic_adios2
 
@@ -158,6 +190,18 @@ contains
     use var, only : vwmean
     use var, only : phimean, phiphimean
 
+    use var, only : Rxmean, Rxxmean
+    use var, only : Rymean, Ryymean
+    use var, only : Rzmean, Rzzmean
+    use var, only : Rxymean, Rxzmean
+    use var, only : Ryzmean
+
+    use var, only : vorxmean, vorxxmean
+    use var, only : vorymean, voryymean
+    use var, only : vorzmean, vorzzmean
+    use var, only : vorxymean, vorxzmean
+    use var, only : voryzmean
+
     implicit none
 
     ! Argument
@@ -210,6 +254,29 @@ contains
     call read_or_write_one_stat(flag_read, gen_statname("uwmean"), uwmean)
     call read_or_write_one_stat(flag_read, gen_statname("vwmean"), vwmean)
 
+    call read_or_write_one_stat(flag_read, gen_statname("Rxmean"), Rxmean)
+    call read_or_write_one_stat(flag_read, gen_statname("Rymean"), Rymean)
+    call read_or_write_one_stat(flag_read, gen_statname("Rzmean"), Rzmean)
+
+    call read_or_write_one_stat(flag_read, gen_statname("Rxxmean"), Rxxmean)
+    call read_or_write_one_stat(flag_read, gen_statname("Ryymean"), Ryymean)
+    call read_or_write_one_stat(flag_read, gen_statname("Rzzmean"), Rzzmean)
+
+    call read_or_write_one_stat(flag_read, gen_statname("Rxymean"), Rxymean)
+    call read_or_write_one_stat(flag_read, gen_statname("Rxzmean"), Rxzmean)
+    call read_or_write_one_stat(flag_read, gen_statname("Ryzmean"), Ryzmean)
+
+    call read_or_write_one_stat(flag_read, gen_statname("vorxmean"), vorxmean)
+    call read_or_write_one_stat(flag_read, gen_statname("vorymean"), vorymean)
+    call read_or_write_one_stat(flag_read, gen_statname("vorzmean"), vorzmean)
+
+    call read_or_write_one_stat(flag_read, gen_statname("vorxxmean"), vorxxmean)
+    call read_or_write_one_stat(flag_read, gen_statname("voryymean"), voryymean)
+    call read_or_write_one_stat(flag_read, gen_statname("vorzzmean"), vorzzmean)
+
+    call read_or_write_one_stat(flag_read, gen_statname("vorxymean"), vorxymean)
+    call read_or_write_one_stat(flag_read, gen_statname("vorxzmean"), vorxzmean)
+    call read_or_write_one_stat(flag_read, gen_statname("voryzmean"), voryzmean)
     if (iscalar==1) then
        do is=1, numscalar
           write(filename,"('phi',I2.2)") is
@@ -263,7 +330,7 @@ contains
   !
   ! Statistics : Intialize, update and perform IO
   !
-  subroutine overall_statistic(ux1,uy1,uz1,phi1,pp3,ep1)
+  subroutine overall_statistic(ux1,uy1,uz1,phi1,pp3,ep1,Rx1,Ry1,Rz1,vorx1,vory1,vorz1)
 
     use param
     use variables
@@ -285,10 +352,24 @@ contains
     use var, only : vwmean
     use var, only : phimean, phiphimean
 
+    use var, only : Rxmean, Rxxmean
+    use var, only : Rymean, Ryymean
+    use var, only : Rzmean, Rzzmean
+    use var, only : Rxymean, Rxzmean
+    use var, only : Ryzmean
+
+    use var, only : vorxmean, vorxxmean
+    use var, only : vorymean, voryymean
+    use var, only : vorzmean, vorzzmean
+    use var, only : vorxymean, vorxzmean
+    use var, only : voryzmean
+
     implicit none
 
     !! Inputs
     real(mytype),dimension(xsize(1),xsize(2),xsize(3)),intent(in) :: ux1,uy1,uz1,ep1
+    real(mytype),dimension(xsize(1),xsize(2),xsize(3)),intent(in) :: Rx1,Ry1,Rz1
+    real(mytype),dimension(xsize(1),xsize(2),xsize(3)),intent(in) :: vorx1,vory1,vorz1
     real(mytype),dimension(xsize(1),xsize(2),xsize(3),numscalar),intent(in) :: phi1
     real(mytype),dimension(ph1%zst(1):ph1%zen(1),ph1%zst(2):ph1%zen(2),nzmsize,npress) :: pp3
 
@@ -328,6 +409,20 @@ contains
       !! Second-order velocity moments
       call update_variance_vector(uumean, vvmean, wwmean, uvmean, uwmean, vwmean, &
                                   ux1, uy1, uz1, ep1)
+
+      !! Mean Liutex vector
+      call update_average_vector(Rxmean,Rymean,Rzmean, &
+                                 Rx1, Ry1, Rz1, ep1)
+      !! Second-order Liutex moments
+      call update_variance_vector(Rxxmean, Ryymean, Rzzmean, Rxymean, Rxzmean, Ryzmean, &
+                                 Rx1, Ry1, Rz1, ep1)
+
+      !! Mean vorticity
+      call update_average_vector(vorxmean,vorymean,vorzmean, &
+                                 vorx1, vory1, vorz1, ep1)
+      !! Second-order vorticity moments
+      call update_variance_vector(vorxxmean, voryymean, vorzzmean, vorxymean, vorxzmean, voryzmean, &
+                                 vorx1, vory1, vorz1, ep1)
 
       !! Scalar statistics
       if (iscalar==1) then

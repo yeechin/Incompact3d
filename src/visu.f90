@@ -207,7 +207,7 @@ contains
     ! Update log file
     if (nrank.eq.0) then
       call cpu_time(tstart)
-      print *,'Writing snapshots =>',itime/ioutput
+      print *,'Writing snapshots =>',itime
     end if
 
 #ifdef ADIOS2

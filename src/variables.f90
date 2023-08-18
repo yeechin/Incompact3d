@@ -14,6 +14,7 @@ module var
   ! define all major arrays here
   real(mytype), save, allocatable, dimension(:,:,:) :: ux1, ux2, ux3, po3, dv3
   real(mytype), save, allocatable, dimension(:,:,:) :: Rx1, Ry1, Rz1
+  real(mytype), save, allocatable, dimension(:,:,:) :: vorx1, vory1, vorz1
   real(mytype), save, allocatable, dimension(:,:,:,:) :: pp3
   real(mytype), save, allocatable, dimension(:,:,:) :: uy1, uy2, uy3
   real(mytype), save, allocatable, dimension(:,:,:) :: uz1, uz2, uz3
@@ -33,6 +34,8 @@ module var
 
   !arrays for statistic collection
   real(mytype), save, allocatable, dimension(:,:,:) :: umean,vmean,wmean,pmean,uumean,vvmean,wwmean,uvmean,uwmean,vwmean,tmean
+  real(mytype), save, allocatable, dimension(:,:,:) :: Rxmean, Rymean, Rzmean, Rxxmean, Ryymean, Rzzmean, Rxymean, Rxzmean, Ryzmean
+  real(mytype), save, allocatable, dimension(:,:,:) :: vorxmean, vorymean, vorzmean, vorxxmean, voryymean, vorzzmean, vorxymean, vorxzmean, voryzmean
   real(mytype), save, allocatable, dimension(:,:,:,:) :: phimean,phiphimean,uphimean,vphimean,wphimean
 
   !arrays for visualization
@@ -306,6 +309,32 @@ contains
 
     allocate (tmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
     tmean=zero
+
+    allocate (Rxmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (Rymean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (Rzmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (Rxxmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (Ryymean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (Rzzmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (Rxymean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (Rxzmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (Ryzmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    Rxmean=zero; Rymean=zero;Rzmean=zero
+    Rxxmean=zero;Ryymean=zero;Rzzmean=zero
+    Rxymean=zero;Rxzmean=zero;Ryzmean=zero
+	
+    allocate (vorxmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (vorymean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (vorzmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (vorxxmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (voryymean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (vorzzmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (vorxymean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (vorxzmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    allocate (voryzmean(xstS(1):xenS(1),xstS(2):xenS(2),xstS(3):xenS(3)))
+    vorxmean=zero; vorymean=zero;vorzmean=zero
+    vorxxmean=zero;voryymean=zero;vorzzmean=zero
+    vorxymean=zero;vorxzmean=zero;voryzmean=zero
 
     !Y PENCILS
     call alloc_y(ux2)

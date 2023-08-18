@@ -80,8 +80,11 @@ program xcompact3d
      call restart(ux1,uy1,uz1,dux1,duy1,duz1,ep1,pp3(:,:,:,1),phi1,dphi1,px1,py1,pz1,rho1,drho1,mu1,1)
 
      call simu_stats(3)
+     if (itype.eq.itype_channel) then
+       call update_liutex_channel(ux1,uy1,uz1)
+     endif
 
-     call postprocessing(rho1,ux1,uy1,uz1,pp3,phi1,ep1)
+     call postprocessing(rho1,ux1,uy1,uz1,pp3,phi1,ep1,Rx1,Ry1,Rz1,vorx1,vory1,vorz1)
 
   enddo !! End time loop
 
@@ -328,3 +331,87 @@ subroutine check_transients()
   if (nrank == 0) write(*,*)'## MAX duz1 ', dep1
   
 end subroutine check_transients
+
+subroutine update_liutex_channel(ux1, uy1, uz1)
+
+  use decomp_2d
+  use variables
+  use channel, only : critR
+  use param
+  use var, only : ux2, uy2, uz2, ux3, uy3, uz3
+  USE var, only : ta1,tb1,tc1,td1,te1,tf1,tg1,th1,ti1,di1
+  USE var, only : ta2,tb2,tc2,td2,te2,tf2,di2,ta3,tb3,tc3,td3,te3,tf3,di3
+  USE var, only : Rx1,Ry1,Rz1
+  USE var, only: vorx1, vory1, vorz1
+  use var, ONLY : nzmsize
+!  use visu, only : write_field
+
+  use ibm_param, only : ubcx,ubcy,ubcz
+
+
+  implicit none
+
+  real(mytype), intent(in), dimension(xsize(1),xsize(2),xsize(3)) :: ux1, uy1, uz1
+
+integer :: i,j,k
+
+  ! Write vorticity as an example of post processing
+
+  ! Perform communications if needed
+  if (sync_vel_needed) then
+    call transpose_x_to_y(ux1,ux2)
+    call transpose_x_to_y(uy1,uy2)
+    call transpose_x_to_y(uz1,uz2)
+    call transpose_y_to_z(ux2,ux3)
+    call transpose_y_to_z(uy2,uy3)
+    call transpose_y_to_z(uz2,uz3)
+    sync_vel_needed = .false.
+  endif
+
+  !x-derivatives
+  call derx (ta1,ux1,di1,sx,ffx,fsx,fwx,xsize(1),xsize(2),xsize(3),0,ubcx)
+  call derx (tb1,uy1,di1,sx,ffxp,fsxp,fwxp,xsize(1),xsize(2),xsize(3),1,ubcy)
+  call derx (tc1,uz1,di1,sx,ffxp,fsxp,fwxp,xsize(1),xsize(2),xsize(3),1,ubcz)
+  !y-derivatives
+  call dery (ta2,ux2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1,ubcx)
+  call dery (tb2,uy2,di2,sy,ffy,fsy,fwy,ppy,ysize(1),ysize(2),ysize(3),0,ubcy)
+  call dery (tc2,uz2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1,ubcz)
+  !!z-derivatives
+  call derz (ta3,ux3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1,ubcx)
+  call derz (tb3,uy3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1,ubcy)
+  call derz (tc3,uz3,di3,sz,ffz,fsz,fwz,zsize(1),zsize(2),zsize(3),0,ubcz)
+  !!all back to x-pencils
+  call transpose_z_to_y(ta3,td2)
+  call transpose_z_to_y(tb3,te2)
+  call transpose_z_to_y(tc3,tf2)
+  call transpose_y_to_x(td2,tg1)
+  call transpose_y_to_x(te2,th1)
+  call transpose_y_to_x(tf2,ti1)
+  call transpose_y_to_x(ta2,td1)
+  call transpose_y_to_x(tb2,te1)
+  call transpose_y_to_x(tc2,tf1)
+  !du/dx=ta1 du/dy=td1 and du/dz=tg1
+  !dv/dx=tb1 dv/dy=te1 and dv/dz=th1
+  !dw/dx=tc1 dw/dy=tf1 and dw/dz=ti1
+
+Rx1 = zero; Ry1 = zero; Rz1 = zero
+  do k=1,xsize(3)
+     do j=1,xsize(2)
+        do i=1,xsize(1)
+		  call critR(ta1(i,j,k),td1(i,j,k),tg1(i,j,k),          &
+		             tb1(i,j,k),te1(i,j,k),th1(i,j,k),          &
+					 tc1(i,j,k),tf1(i,j,k),ti1(i,j,k),          &
+					 Rx1(i,j,k),Ry1(i,j,k),Rz1(i,j,k))
+        enddo
+     enddo
+  enddo
+
+  vorx1 = tf1 - th1 ! modified by Yiqian Wang
+  vory1 = tg1 - tc1
+  vorz1 = tb1 - td1
+
+! output Liutex field to check correctness of the implementation
+! call write_field(Rx1, ".", "Rx", 123456)
+! call write_field(Ry1, ".", "Ry", 123456)
+! call write_field(Rz1, ".", "Rz", 123456)
+end subroutine update_liutex_channel
