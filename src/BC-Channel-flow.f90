@@ -17,7 +17,7 @@ module channel
   PRIVATE ! All functions/subroutines private by default
   PUBLIC :: init_channel, boundary_conditions_channel, postprocess_channel, &
             visu_channel, visu_channel_init, momentum_forcing_channel, &
-            geomcomplex_channel
+            geomcomplex_channel, critR
 
 contains
   !############################################################################
@@ -280,6 +280,7 @@ contains
     use var, only : ux2, uy2, uz2, ux3, uy3, uz3
     use var, only : ta1,tb1,tc1,td1,te1,tf1,tg1,th1,ti1,di1
     use var, only : ta2,tb2,tc2,td2,te2,tf2,di2,ta3,tb3,tc3,td3,te3,tf3,di3
+    use var, only : Rx1,Ry1,Rz1
     use var, ONLY : nzmsize
     use visu, only : write_field
     
@@ -292,6 +293,8 @@ contains
     real(mytype), intent(in), dimension(xsize(1),xsize(2),xsize(3),numscalar) :: phi1
     real(mytype), intent(in), dimension(xsize(1),xsize(2),xsize(3)) :: ep1
     integer, intent(in) :: num
+
+    integer :: i,j,k
 
     ! Write vorticity as an example of post processing
 
@@ -339,8 +342,184 @@ contains
                  - tg1(:,:,:) * tc1(:,:,:) &
                  - th1(:,:,:) * tf1(:,:,:)
     call write_field(di1, ".", "critq", num, flush = .true.) ! Reusing temporary array, force flush
+    Rx1 = zero; Ry1 = zero; Rz1 = zero
+    do k=1,xsize(3)
+      do j=1,xsize(2)
+        do i=1,xsize(1)
+          call critR(ta1(i,j,k),td1(i,j,k),tg1(i,j,k),     &
+                     tb1(i,j,k),te1(i,j,k),th1(i,j,k),     &
+                     tc1(i,j,k),tf1(i,j,k),ti1(i,j,k),     &
+                     Rx1(i,j,k),Ry1(i,j,k),Rz1(i,j,k))
+         enddo
+       enddo
+     enddo
+     call write_field(Rx1, ".", "Rx", num)
+     call write_field(Ry1, ".", "Ry", num)
+     call write_field(Rz1, ".", "Rz", num)
 
   end subroutine visu_channel
+
+  !############################################################################
+  !############################################################################
+  !!
+  !!  SUBROUTINE: critR
+  !!      AUTHOR: Yiqian Wang
+  !! DESCRIPTION: Calculate the Liutex vector
+  !!
+  !############################################################################
+  subroutine critR(dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz,Rx,Ry,Rz)
+	  
+	  implicit none
+	  
+	  real(mytype),intent(in) :: dudx,dudy,dudz,dvdx,dvdy,dvdz,dwdx,dwdy,dwdz
+	  real(mytype),intent(out) :: Rx,Ry,Rz
+	  
+	  real(mytype) :: a(3,3)
+	  
+	  real(mytype) :: aa, bb, cc
+	  real(mytype) :: delta
+	  real(mytype) :: tt(3,3)
+	  
+	  complex(mytype) :: eig1c, eig2c
+	  real(mytype) :: eig3r
+	  
+	  real(mytype) :: qq, rr
+	  real(mytype) :: aaaa, bbbb
+	  
+	  real(mytype) :: vr(3)
+	  real(mytype) :: temp,Rmag
+	  
+	  real(mytype) :: delta1, delta2, delta3
+	  
+      a(1,1) = dudx
+      a(1,2) = dudy
+      a(1,3) = dudz
+      a(2,1) = dvdx
+      a(2,2) = dvdy
+      a(2,3) = dvdz
+      a(3,1) = dwdx
+      a(3,2) = dwdy
+      a(3,3) = dwdz
+	  
+      !-----------------------------------------------------------------------
+      ! Cubic Formula
+      ! Reference: Numerical Recipes in FORTRAN 77, Second Edition
+      ! 5.6 Quadratic and Cubic Equations
+      ! Page 179
+      !-----------------------------------------------------------------------
+
+      ! cubic equation
+      ! x**3 + aa * x**2 + bb * x + cc = 0
+
+      ! coefficients of characteristic equation 
+      aa = -(a(1,1)+a(2,2)+a(3,3))
+
+      tt = matmul(a,a)
+
+      bb = -0.5*(tt(1,1)+tt(2,2)+tt(3,3)-(a(1,1)+a(2,2)+a(3,3))**2)
+
+      cc = -(a(1,1)*(a(2,2)*a(3,3)-a(2,3)*a(3,2))                            &
+             -a(1,2)*(a(2,1)*a(3,3)-a(2,3)*a(3,1))                           &
+             +a(1,3)*(a(2,1)*a(3,2)-a(2,2)*a(3,1)))
+
+      ! discriminant of characteristic equation
+      delta = 18*aa*bb*cc-4*aa**3*cc+aa**2*bb**2-4*bb**3-27*cc**2
+
+      qq = (aa**2-3*bb)/9.0
+      rr = (2*aa**3-9*aa*bb+27*cc)/54.0
+
+      ! delta = rr**2 - qq**3
+      ! alleviate round error
+      delta = -delta/108
+
+      if(delta > 0.0) then ! one real root and two complex conjugate roots
+
+        aaaa = -sign(1.0_mytype, rr)*(abs(rr)+sqrt(delta))**(1.0_mytype/3.0_mytype)
+
+        if(aaaa == 0.0) then
+          bbbb = 0.0
+        else
+          bbbb = qq/aaaa
+        end if
+
+        eig1c = cmplx(-0.5*(aaaa+bbbb)-aa/3.0, 0.5*sqrt(3.0)*(aaaa-bbbb))
+        eig2c = cmplx(real(eig1c), -aimag(eig1c))
+        eig3r = aaaa+bbbb-aa/3.0
+
+        ! real right eigenvector
+
+        delta1 = (a(1,1)-eig3r)*(a(2,2)-eig3r) - a(2,1)*a(1,2)
+        delta2 = (a(2,2)-eig3r)*(a(3,3)-eig3r) - a(2,3)*a(3,2)
+        delta3 = (a(1,1)-eig3r)*(a(3,3)-eig3r) - a(1,3)*a(3,1)
+
+        if(delta1 == 0.0 .and. delta2 == 0.0 .and. delta3 == 0.0) then
+          write(*,*) 'ERROR: delta1 = delta2 = delta3 = 0.0'
+          write(*,*) a(1,1)-eig3r,  a(1,2),       a(1,3)
+          write(*,*) a(2,1),        a(2,2)-eig3r, a(2,3)
+          write(*,*) a(3,1),        a(3,2),       a(3,3)-eig3r
+          stop
+        end if
+
+        if(abs(delta1) >= abs(delta2) .and.                                  &
+           abs(delta1) >= abs(delta3)) then
+
+          vr(1) = (-(a(2,2)-eig3r)*a(1,3) +         a(1,2)*a(2,3))/delta1
+          vr(2) = (         a(2,1)*a(1,3) - (a(1,1)-eig3r)*a(2,3))/delta1
+          vr(3) = 1.0
+
+        else if(abs(delta2) >= abs(delta1) .and.                             &
+                abs(delta2) >= abs(delta3)) then
+
+          vr(1) = 1.0
+          vr(2) = (-(a(3,3)-eig3r)*a(2,1) +         a(2,3)*a(3,1))/delta2
+          vr(3) = (         a(3,2)*a(2,1) - (a(2,2)-eig3r)*a(3,1))/delta2
+
+        else if(abs(delta3) >= abs(delta1) .and.                             &
+                abs(delta3) >= abs(delta2)) then
+
+           vr(1) = (-(a(3,3)-eig3r)*a(1,2) +         a(1,3)*a(3,2))/delta3
+           vr(2) = 1.0
+           vr(3) = (         a(3,1)*a(1,2) - (a(1,1)-eig3r)*a(3,2))/delta3
+
+        else
+
+          write(*,*) 'ERROR: '
+          write(*,*) delta1, delta2, delta3
+          stop
+
+        end if
+
+        temp = sqrt(vr(1)**2+vr(2)**2+vr(3)**2)
+
+        vr(1) = vr(1)/temp
+        vr(2) = vr(2)/temp
+        vr(3) = vr(3)/temp
+		
+		! Explicit formula by Yiqian Wang Journal of Hydrodynamics 2019
+		temp = (dwdy-dvdz)*vr(1)+(dudz-dwdx)*vr(2)+(dvdx-dudy)*vr(3)
+		vr = sign(1.0_mytype,temp)*vr
+		temp = abs(temp)
+!     When Liutex is basically the same as the vorticity in the direction of 
+!     the real eigenvector, the term inside sqrt() could possibly be a small
+!     negative. 
+		Rmag = temp - sqrt(abs(temp**2-4.0_mytype*(aimag(eig1c))**2))
+		Rx = Rmag * vr(1)
+		Ry = Rmag * vr(2)
+		Rz = Rmag * vr(3)
+		
+!		if(temp**2-4*(aimag(eig1c)**2)<0.0) then
+!		write(*,*)Rx,Rmag,vr(1),vr(2),vr(3),temp**2-4*(aimag(eig1c)**2)
+!		endif
+		
+	else !three real eigenvalues
+		Rx = zero
+		Ry = zero
+		Rz = zero
+	endif
+	  
+
+	  
+  end subroutine critR
   !############################################################################
   !############################################################################
   !!

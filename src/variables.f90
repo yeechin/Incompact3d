@@ -13,6 +13,7 @@ module var
   
   ! define all major arrays here
   real(mytype), save, allocatable, dimension(:,:,:) :: ux1, ux2, ux3, po3, dv3
+  real(mytype), save, allocatable, dimension(:,:,:) :: Rx1, Ry1, Rz1
   real(mytype), save, allocatable, dimension(:,:,:,:) :: pp3
   real(mytype), save, allocatable, dimension(:,:,:) :: uy1, uy2, uy3
   real(mytype), save, allocatable, dimension(:,:,:) :: uz1, uz2, uz3
@@ -157,6 +158,12 @@ contains
     di1 = zero
     call alloc_x(ep1)
     ep1 = zero
+    call alloc_x(Rx1)
+    Rx1 = zero
+    call alloc_x(Ry1)
+    Ry1 = zero
+    call alloc_x(Rz1)
+    Rz1 = zero
     if (ilmn) then
       call alloc_x(mu1, opt_global=.true.)
       mu1 = one
