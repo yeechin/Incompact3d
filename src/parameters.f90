@@ -57,7 +57,7 @@ subroutine parameter(input_i3d)
        nclxS1, nclxSn, nclyS1, nclySn, nclzS1, nclzSn, &
        scalar_lbound, scalar_ubound, sc_even, sc_skew, &
        alpha_sc, beta_sc, g_sc, Tref
-  NAMELIST /LESModel/ jles, smagcst, smagwalldamp, nSmag, walecst, maxdsmagcst, iconserv
+  NAMELIST /LESModel/ jles, smagcst, smagwalldamp, nSmag, walecst, maxdsmagcst, iconserv, liutexcst
   NAMELIST /Tripping/ itrip,A_tr,xs_tr_tbl,ys_tr_tbl,ts_tr_tbl,x0_tr_tbl
   NAMELIST /ibmstuff/ cex,cey,cez,ra,rai,rao,nobjmax,nraf,nvol,iforces, npif, izap, ianal, imove, thickness, chord, omega ,ubcx,ubcy,ubcz,rads, c_air
   NAMELIST /ForceCVs/ xld, xrd, yld, yud!, zld, zrd
@@ -409,7 +409,7 @@ subroutine parameter(input_i3d)
        endif
      endif
      !
-     if (ilesmod.ne.0) then
+     if (ilesmod.eq.0) then
        write(*,*) '                   : DNS'
      else
        if (jles==1) then
@@ -420,6 +420,8 @@ subroutine parameter(input_i3d)
           write(*,*) '                   : Phys dyn. Smag'
        else if (jles==4) then
           write(*,*) '                   : iSVV'
+       else if (jles==11) then
+          write(*,*) '                   : Liutex SGS model'
        else
        endif
      endif

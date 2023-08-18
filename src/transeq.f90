@@ -487,7 +487,8 @@ contains
 #endif
 
     ! If LES modelling is enabled, add the SGS stresses
-    if (ilesmod.ne.0.and.jles.le.3.and.jles.gt.0) then
+    !if (ilesmod.ne.0.and.jles.le.3.and.jles.gt.0) then
+    if (ilesmod.ne.0.and.((jles.le.3.and.jles.gt.0).or.(jles.eq.11))) then
        call compute_SGS(sgsx1,sgsy1,sgsz1,ux1,uy1,uz1,phi1,ep1)
        dux1(:,:,:,1) = dux1(:,:,:,1) + sgsx1(:,:,:)
        duy1(:,:,:,1) = duy1(:,:,:,1) + sgsy1(:,:,:)

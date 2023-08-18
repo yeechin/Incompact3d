@@ -17,7 +17,7 @@ module visu
   !        3 for 2D output with Z average
   integer, save :: output2D
   integer :: ioxdmf
-  character(len=9) :: ifilenameformat = '(I5.3)'
+  character(len=9) :: ifilenameformat = '(I6.3)'
   real, save :: tstart, tend
 
   character(len=*), parameter :: io_name = "solution-io"

@@ -53,6 +53,9 @@ contains
        else if (jles==3) then
           write(*, *) ' Dynamic Smagorinsky is used ... '
           write(*, *) ' Max value for the dynamic constant field = ', maxdsmagcst
+       else if (jles==11) then
+          write(*,*) ' Liutex SGS model is used ... '
+          write(*,*) ' Liutex model constant = ', liutexcst
        endif
        write(*, *) '++++++++++++++++++++++++++++++++'
        !if (nrank==0) print *, "Del y min max= ", minval(del), maxval(del)
@@ -123,6 +126,8 @@ contains
 
     elseif(jles.eq.3) then ! Lilly-style Dynamic Smagorinsky
        call dynsmag(nut1,ux1,uy1,uz1,ep1)
+    elseif(jles.eq.11) then ! Liutex SGS model
+       call liutexsgs(nut1,ux1,uy1,uz1)
 
     endif
 
@@ -1453,5 +1458,128 @@ end subroutine wale
     call transpose_y_to_x(sgsz2, sgsz1)
 
   end subroutine sgs_mom_conservative
+
+  subroutine liutexsgs(nut1,ux1,uy1,uz1)
+    !================================================================================
+    !
+    !  SUBROUTINE: liutexsgs
+    ! DESCRIPTION: Calculates the eddy-viscosity nut according to the
+    !              liutex sgs model
+    !      AUTHOR: Yiqian Wang <yiqian@suda.edu.cn>
+    !
+    !================================================================================
+
+    USE param
+    USE variables
+    USE decomp_2d
+    USE decomp_2d_io
+    USE var, only : ta1,tb1,tc1,td1,te1,tf1,tg1,th1,ti1,di1
+    USE var, only : ux2,uy2,uz2,ta2,tb2,tc2,td2,te2,tf2,tg2,th2,ti2,di2
+    USE var, only : ux3,uy3,uz3,ta3,tb3,tc3,td3,te3,tf3,tg3,th3,ti3,di3
+    USE var, only : sxx1,syy1,szz1,sxy1,sxz1,syz1,srt_smag
+    USE var, only : gxx1,gyx1,gzx1,gxy2,gyy2,gzy2,gxz3,gyz3,gzz3
+    USE var, only : gxy1,gyy1,gzy1,gxz2,gyz2,gzz2,gxz1,gyz1,gzz1
+    USE var, only : sxx2,syy2,szz2,sxy2,sxz2,syz2,srt_smag2,nut2
+    USE var, only : sxx3,syy3,szz3,sxy3,sxz3,syz3
+    USE var, only : Rx1,Ry1,Rz1
+    USE channel, only : critR
+    USE ibm_param
+
+    implicit none
+
+    real(mytype), dimension(xsize(1), xsize(2), xsize(3)) :: ux1, uy1, uz1
+    real(mytype), dimension(xsize(1), xsize(2), xsize(3)) :: nut1
+    real(mytype) :: liutex_constant, y, length
+
+    integer :: i, j, k
+    character(len = 30) :: filename
+
+
+    ! INFO about the auxillary arrays
+    !--------------------------------------------------------
+    ! gxx= dux/dx; gyx=duy/dx; gzx=duz/dx;
+    ! gxy= dux/dy; gyy=duy/dy; gzy=duz/dy;
+    ! gxz= dux/dz; gyz=duy/dz; gzz=duz/dz
+
+    call derx (gxx1,ux1,di1,sx,ffx,fsx,fwx,xsize(1),xsize(2),xsize(3),0,ubcx)
+    call derx (gyx1,uy1,di1,sx,ffxp,fsxp,fwxp,xsize(1),xsize(2),xsize(3),1,ubcy)
+    call derx (gzx1,uz1,di1,sx,ffxp,fsxp,fwxp,xsize(1),xsize(2),xsize(3),1,ubcz)
+
+    !WORK Y-PENCILS
+    call transpose_x_to_y(ux1,ux2)
+    call transpose_x_to_y(uy1,uy2)
+    call transpose_x_to_y(uz1,uz2)
+
+    call dery (gxy2,ux2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1,ubcx)
+    call dery (gyy2,uy2,di2,sy,ffy,fsy,fwy,ppy,ysize(1),ysize(2),ysize(3),0,ubcy)
+    call dery (gzy2,uz2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1,ubcz)
+
+    !WORK Z-PENCILS
+    call transpose_y_to_z(ux2,ux3)
+    call transpose_y_to_z(uy2,uy3)
+    call transpose_y_to_z(uz2,uz3)
+
+    call derz(gxz3,ux3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1,ubcx)
+    call derz(gyz3,uy3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1,ubcz)
+    call derz(gzz3,uz3,di3,sz,ffz,fsz,fwz,zsize(1),zsize(2),zsize(3),0,ubcz)
+
+    !WORK Y-PENCILS
+    call transpose_z_to_y(gxz3,gxz2)
+    call transpose_z_to_y(gyz3,gyz2)
+    call transpose_z_to_y(gzz3,gzz2)
+
+    !WORK X-PENCILS
+    call transpose_y_to_x(gxy2,gxy1)
+    call transpose_y_to_x(gyy2,gyy1)
+    call transpose_y_to_x(gzy2,gzy1)
+    call transpose_y_to_x(gxz2,gxz1)
+    call transpose_y_to_x(gyz2,gyz1)
+    call transpose_y_to_x(gzz2,gzz1)
+	
+!    srt_smag = zero
+!    srt_smag = sxx1 * sxx1 + syy1 * syy1 + szz1 * szz1 + two * sxy1 * sxy1 + two * sxz1 * sxz1 + two * syz1 * syz1
+
+     Rx1 = zero; Ry1 = zero; Rz1 = zero
+       do k=1,xsize(3)
+          do j=1,xsize(2)
+             do i=1,xsize(1)
+	     	  call critR(gxx1(i,j,k),gxy1(i,j,k),gxz1(i,j,k),      &
+		             gyx1(i,j,k),gyy1(i,j,k),gyz1(i,j,k),          &
+					 gzx1(i,j,k),gzy1(i,j,k),gzz1(i,j,k),          &
+					 Rx1(i,j,k),Ry1(i,j,k),Rz1(i,j,k))
+             enddo
+          enddo
+       enddo
+	   
+	   gxy1 = sqrt(Rx1**2+Ry1**2+Rz1**2) 
+	   
+	  call transpose_x_to_y(gxy1, gxy2)
+
+    nut1 = zero; nut2 = zero
+!    call transpose_x_to_y(srt_smag, srt_smag2)
+    do k = 1, ysize(3)
+       do j = 1, ysize(2)
+          do i = 1, ysize(1)
+              length=liutexcst*del(j)
+             !Calculate eddy visc nu_t
+             nut2(i, j, k) = ((length)**two) * gxy2(i,j,k)
+          enddo
+       enddo
+    enddo
+    call transpose_y_to_x(nut2, nut1)
+
+    if ((mod(itime,ilist)==0 .or. itime == ifirst .or. itime == ilast)) then
+       if (nrank==0) write(*,*) "liutex nut1     min max= ", minval(nut1), maxval(nut1)
+   endif
+
+    if (mod(itime, ioutput).eq.0) then
+
+       call decomp_2d_write_one(1, nut1, turb_dir, &
+            gen_filename(".", "nut_liutex", itime / ioutput, "bin"), &
+            2, io_turb)
+
+    endif
+
+  end subroutine liutexsgs
 
 end module les
