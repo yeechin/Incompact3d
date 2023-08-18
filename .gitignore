@@ -6,6 +6,10 @@
 *.mod
 *.smod
 *.xdmf
+*.bin
+*.x
+*.q
+*.dat
 .#*
 *.jpg
 *.pdf
@@ -35,4 +39,7 @@ Test*
 checkpoint
 restart*
 forces.dat*
-data/
+data/*
+!data/*.m
+*log*
+probes/
