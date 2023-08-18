@@ -43,3 +43,4 @@ data/*
 !data/*.m
 *log*
 probes/
+statistics/
