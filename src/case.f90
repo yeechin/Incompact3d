@@ -14,6 +14,7 @@ module case
   use hill
   use dbg_schemes
   use channel
+  use channel_riblet
   use mixlayer
   use lockexch
   use tbl
@@ -75,6 +76,10 @@ contains
     elseif (itype.eq.itype_channel) then
 
        call init_channel (ux1, uy1, uz1, ep1, phi1)
+	   
+	elseif (itype.eq.itype_channel_riblet) then
+		   
+		call init_channel_riblet(ux1,uy1,uz1,ep1,phi1)
 
     elseif (itype.eq.itype_hill) then
 
@@ -171,6 +176,10 @@ contains
     elseif (itype.eq.itype_channel) then
 
        call boundary_conditions_channel (ux, uy, uz, phi)
+	   
+    elseif (itype.eq.itype_channel_riblet) then
+
+        call boundary_conditions_channel_riblet (ux, uy, uz, phi)
 
     elseif (itype.eq.itype_hill) then
 
@@ -341,6 +350,10 @@ contains
     elseif (itype.eq.itype_channel) then
 
        call postprocess_channel (ux, uy, uz, pp, phi, ep)
+	  
+    elseif (itype.eq.itype_channel_riblet) then
+
+       call postprocess_channel_riblet (ux, uy, uz, pp, phi, ep)
 
     elseif (itype.eq.itype_hill) then
 
@@ -408,6 +421,10 @@ contains
     else if (itype .eq. itype_channel) then
 
        call visu_channel_init(case_visu_init)
+	   
+    else if (itype .eq. itype_channel_riblet) then
+
+        call visu_channel_riblet_init(case_visu_init)
 
     else if (itype .eq. itype_hill) then
 
@@ -467,6 +484,11 @@ contains
 
        call visu_channel(ux1, uy1, uz1, pp3, phi1, ep1, num)
        called_visu = .true.
+	   
+    elseif (itype.eq.itype_channel_riblet) then
+
+        call visu_channel_riblet(ux1, uy1, uz1, pp3, phi1, ep1, num)
+        called_visu = .true.
 
     elseif (itype.eq.itype_hill) then
 
@@ -520,6 +542,10 @@ contains
     if (itype.eq.itype_channel) then
 
        call momentum_forcing_channel(dux1, duy1, duz1, ux1, uy1, uz1)
+
+    elseif (itype.eq.itype_channel) then
+
+       call momentum_forcing_channel_riblet(dux1, duy1, duz1, ux1, uy1, uz1)
 
 !!!    elseif (itype.eq.itype_jet) then
 !!!

@@ -80,8 +80,10 @@ program xcompact3d
      call restart(ux1,uy1,uz1,dux1,duy1,duz1,ep1,pp3(:,:,:,1),phi1,dphi1,px1,py1,pz1,rho1,drho1,mu1,1)
 
      call simu_stats(3)
-     if (itype.eq.itype_channel) then
+	 if (itime.ge.initstat) then ! Statistics of Liutex vector
+     if (itype.eq.itype_channel.or.itype.eq.itype_channel_riblet) then
        call update_liutex_channel(ux1,uy1,uz1)
+     endif
      endif
 
      call postprocessing(rho1,ux1,uy1,uz1,pp3,phi1,ep1,Rx1,Ry1,Rz1,vorx1,vory1,vorz1)

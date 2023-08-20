@@ -46,11 +46,12 @@ contains
   subroutine geomcomplex(epsi, nxi, nxf, ny, nyi, nyf, nzi, nzf, dx, yp, dz, remp)
 
     USE param, ONLY : itype, itype_cyl, itype_hill, itype_channel,&
-                      itype_sandbox, itype_pipe
+                      itype_channel_riblet, itype_sandbox, itype_pipe
     USE decomp_2d, ONLY : mytype
     USE cyl, ONLY : geomcomplex_cyl
     USE hill, ONLY : geomcomplex_hill
     USE channel, ONLY : geomcomplex_channel
+	USE channel_riblet, ONLY : geomcomplex_channel_riblet
     USE sandbox, ONLY : geomcomplex_sandbox
     USE pipe, ONLY : geomcomplex_pipe
 
@@ -73,6 +74,10 @@ contains
     ELSEIF (itype.EQ.itype_channel) THEN
 
        CALL geomcomplex_channel(epsi, nxi, nxf, ny, nyi, nyf, nzi, nzf, yp, remp)
+	   
+    ELSEIF (itype.EQ.itype_channel_riblet) THEN
+
+       CALL geomcomplex_channel_riblet(epsi, nxi, nxf, ny, nyi, nyf, nzi, nzf, yp, remp)
 
     ELSEIF (itype.EQ.itype_sandbox) THEN
      

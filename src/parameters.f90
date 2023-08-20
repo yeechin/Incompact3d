@@ -327,6 +327,8 @@ subroutine parameter(input_i3d)
         print *,'Simulating TGV'
      elseif (itype.eq.itype_channel) then
         print *,'Simulating channel'
+     elseif (itype.eq.itype_channel_riblet) then
+         print *,'Simulating channel riblet'
      elseif (itype.eq.itype_pipe) then
         print *,'Simulating pipe'
      elseif (itype.eq.itype_hill) then
@@ -365,6 +367,16 @@ subroutine parameter(input_i3d)
          write(*,"(' Re_cl (estimated)      : ',F17.3)") re_cent
          write(*,"(' fcpg                   : ',F17.8)") fcpg
        end if
+     elseif (itype.eq.itype_channel_riblet) then
+         if (.not.cpg) then
+           write(*,*) 'Channel riblet forcing with constant flow rate (CFR)'
+           write(*,"(' Re_cl                  : ',F17.3)") re
+         else 
+           write(*,*) 'Channel riblet forcing with constant pressure gradient (CPG)'
+           write(*,"(' Re_tau                 : ',F17.3)") re
+           write(*,"(' Re_cl (estimated)      : ',F17.3)") re_cent
+           write(*,"(' fcpg                   : ',F17.8)") fcpg
+         end if
      else
        write(*,"(' Reynolds number Re     : ',F17.3)") re
      endif
@@ -638,7 +650,7 @@ subroutine parameter_defaults()
 
   primary_species = -1
 
-  !! Channel
+  !! Channel & Channel Riblet
   cpg = .false.
   idir_stream = 1
 

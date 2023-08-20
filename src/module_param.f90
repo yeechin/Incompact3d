@@ -285,7 +285,8 @@ module param
        itype_uniform = 11, &
        itype_sandbox = 12, &
        itype_cavity = 13, &
-       itype_pipe = 14
+       itype_pipe = 14, &
+	   itype_channel_riblet = 101
 
   integer :: cont_phi,itr,itime,itest,iprocessing
   integer :: ifft,istret,iforc_entree,iturb
@@ -309,7 +310,7 @@ module param
   logical, save :: sync_vel_needed = .true.
   logical, save :: sync_scal_needed = .true.
 
-  !! Channel flow
+  !! Channel flow & Channel riblet flow
   integer :: idir_stream
   logical :: cpg
   real(mytype) :: re_cent, fcpg
