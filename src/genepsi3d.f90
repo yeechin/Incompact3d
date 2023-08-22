@@ -77,7 +77,7 @@ contains
 	   
     ELSEIF (itype.EQ.itype_channel_riblet) THEN
 
-       CALL geomcomplex_channel_riblet(epsi, nxi, nxf, ny, nyi, nyf, nzi, nzf, yp, remp)
+       CALL geomcomplex_channel_riblet(epsi,nxi,nxf,ny,nyi,nyf,nzi,nzf,dx,yp,dz,remp)
 
     ELSEIF (itype.EQ.itype_sandbox) THEN
      

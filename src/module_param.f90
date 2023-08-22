@@ -27,6 +27,10 @@ module variables
 
   integer :: nx,ny,nz,numscalar,p_row,p_col,nxm,nym,nzm,spinup_time
   integer :: nstat=1,nvisu=1,nprobe=1,nlength=1,ilist=25
+  integer :: type_riblet ! Riblet type(1=Scalloped, 2=triangular, 3=cosinsoidal, 4=parabolic)
+  integer :: n_riblet ! number of riblets in the spanwise direction
+  real(mytype) :: A_riblet, B_riblet ! parameter to control scalloped riblet tip and valley curvature
+  real(mytype) :: gamma_riblet ! Height_width ratio of riblets
 
   real(mytype),allocatable,dimension(:) :: sc,uset,cp,ri,group
   real(mytype) :: nu0nu, cnu

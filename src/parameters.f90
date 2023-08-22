@@ -46,7 +46,8 @@ subroutine parameter(input_i3d)
        ivisu, ipost, &
        gravx, gravy, gravz, &
        cpg, idir_stream, &
-       ifilter, C_filter, iturbine
+       ifilter, C_filter, iturbine, &
+	   type_riblet, n_riblet, A_riblet, B_riblet, gamma_riblet
   NAMELIST /NumOptions/ ifirstder, isecondder, itimescheme, iimplicit, &
        nu0nu, cnu, ipinter
   NAMELIST /InOutParam/ irestart, icheckpoint, ioutput, nvisu, ilist, iprocessing, &
@@ -653,6 +654,13 @@ subroutine parameter_defaults()
   !! Channel & Channel Riblet
   cpg = .false.
   idir_stream = 1
+  type_riblet = 1
+  n_riblet = 0
+  A_riblet = zero
+  B_riblet = zero
+  gamma_riblet = zero
+
+
 
   !! Pipe
   rai = -1.0 !inner radius

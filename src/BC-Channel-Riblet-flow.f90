@@ -395,39 +395,95 @@ contains
   end subroutine momentum_forcing_channel_riblet
   !############################################################################
   !############################################################################
-  subroutine geomcomplex_channel_riblet(epsi,nxi,nxf,ny,nyi,nyf,nzi,nzf,yp,remp)
+  subroutine geomcomplex_channel_riblet(epsi,nxi,nxf,ny,nyi,nyf,nzi,nzf,dx,yp,dz,remp)
 
     use decomp_2d, only : mytype
     use param, only : zero, one, two, ten
     use ibm
+	use mpi
 
     implicit none
 
     integer                    :: nxi,nxf,ny,nyi,nyf,nzi,nzf
+	real(mytype)               :: dx,dz
     real(mytype),dimension(nxi:nxf,nyi:nyf,nzi:nzf) :: epsi
     real(mytype),dimension(ny) :: yp
     real(mytype)               :: remp
-    integer                    :: j
-    real(mytype)               :: ym
+    integer                    :: i, j, k, code, ierror
+    real(mytype)               :: zm, ym
     real(mytype)               :: zeromach
-    real(mytype)               :: h
+	real(mytype)               :: zstar, a, b
+	real(mytype)               :: y_bump
+	real(mytype),dimension(nzi:nzf) :: dune
+	integer                    :: np_riblet ! number of points to resolve one riblet
+	real(mytype)               :: W_riblet
 
     epsi(:,:,:) = zero
-    h = (yly - two) / two
 
     zeromach=one
     do while ((one + zeromach / two) .gt. one)
        zeromach = zeromach/two
     end do
     zeromach = ten*zeromach
-
-    do j=nyi,nyf
-       ym=yp(j)
-       if ((ym.le.h).or.(ym.ge.(h+two))) then
-          epsi(:,j,:)=remp
-       endif
-    enddo
-
+	
+	np_riblet = nz/n_riblet ! Number of points per riblet
+	W_riblet = zlz/n_riblet ! Width of riblet
+	
+    if (mod(nz,n_riblet)/=0.or.mod(np_riblet,2)/=0) then 
+       write(*,*) 'nz should be an integer multiply n_riblet, and np_riblet should be an even number.'
+       call MPI_ABORT(MPI_COMM_WORLD,code,ierror); stop
+    endif
+	
+	if(type_riblet.eq.1) then ! for scalloped riblets
+	
+    if (.not.((A_riblet.ge.zero.and.A_riblet.le.six.and.B_riblet.ge.six).or.   &
+	    (B_riblet.ge.zero.and.B_riblet.le.six.and.A_riblet.ge.six))) then 
+       write(*,*) 'Wrong parameter of A and B for scalloped riblet.'
+	   write(*,*) 'A and B should satisfy 0<=A<=6<=B or 0<=B<=6<=A'
+       call MPI_ABORT(MPI_COMM_WORLD,code,ierror); stop
+    endif
+	
+	if(A_riblet.eq.six.and.B_riblet.eq.six) then ! Perfect balanced polynomials
+		zstar = zpfive
+		a = eight
+		b = eight
+	else
+		zstar = (three-zpfive*B_riblet)/(A_riblet-B_riblet)
+		a = (two*(A_riblet+B_riblet)*zstar+A_riblet-B_riblet)/three/zstar
+		b = ((A_riblet+B_riblet)*zstar-b_riblet)/onepfive/(zstar-zpfive)
+	endif
+	
+	y_bump = zero
+	dune = zero
+	do k =nzi, nzf
+		zm = real(k-1,mytype)*dz
+		zm = mod(zm, W_riblet)/W_riblet !Non-dimensionalized zm
+		if(zm>zpfive) zm = one - zm
+		if(zm.le.zstar) then !Belongs to the first polynomial
+			y_bump = a*zm**3 - A_riblet*zm**2 + zpfive
+		else
+			y_bump = b*(zm-zpfive)**3 + B_riblet*(zm-zpfive)**2
+		endif
+		dune(k) = y_bump*two*gamma_riblet*W_riblet
+	enddo
+	
+!	write(*,*) dune/W_riblet
+!	pause
+			
+		
+	do i=nxi,nxf
+		do j=nyi,nyf
+			ym=yp(j)
+			do k=nzi,nzf
+				! both the lower wall and upper wall have riblet
+				if((ym-dune(k).le.zeromach).or.(ym-yly+dune(k).ge.-zeromach)) then
+					epsi(i,j,k)=remp
+				endif
+			end do
+		end do
+	end do
+	else if(type_riblet.eq.2) then ! for triangular riblets
+	endif
     return
   end subroutine geomcomplex_channel_riblet
   !############################################################################
