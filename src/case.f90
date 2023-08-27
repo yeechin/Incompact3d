@@ -326,6 +326,7 @@ contains
   subroutine postprocess_case(rho,ux,uy,uz,pp,phi,ep)
 
     use forces
+	use forces_riblet
     use var, only : nzmsize
     use param, only : npress
 
@@ -397,10 +398,13 @@ contains
 
     endif
 
-    if (iforces.eq.1) then
+    if (itype.eq.itype_cyl.and.iforces.eq.1) then
        call force(ux,uy,ep)
        call restart_forces(1)
     endif
+	if(itype.eq.itype_channel_riblet.and.iforces_riblet.eq.1)then
+		call force_riblet(ux,ep)
+	endif
 
   end subroutine postprocess_case
   !##################################################################

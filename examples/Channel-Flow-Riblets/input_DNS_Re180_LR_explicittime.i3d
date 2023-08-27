@@ -142,9 +142,10 @@ cex=5.        !when simulating a cylinder x coordinate of the center
 cey=6.        !when simulating a cylinder y coordinate of the center
 ra=0.5        !when simulating a cylinder, radius
 nraf=10       !level of refinement for iibm==2 to find the surface of the immersed object
-nobjmax=20     !number of immersed objects (DO NOT USE ZERO OBJECTS)
-iforces=0
+nobjmax=20    !number of immersed objects (DO NOT USE ZERO OBJECTS)
+iforces_riblet=1
 nvol=1        !Number of volumes for computing force balance
+npif=2       !Number of points for the reconstruction (range 0-3, defaulted to 2)
 
 /End
 

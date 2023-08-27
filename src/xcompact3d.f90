@@ -104,6 +104,7 @@ subroutine init_xcompact3d()
   use case
   use sandbox, only : init_sandbox
   use forces
+  use forces_riblet
 
   use var
 
@@ -203,11 +204,15 @@ subroutine init_xcompact3d()
      call body(ux1,uy1,uz1,ep1)
   endif
 
-  if (iforces.eq.1) then
+  if (itype.eq.itype_cyl.and.iforces.eq.1) then
      call init_forces()
      if (irestart==1) then
         call restart_forces(0)
      endif
+  endif
+  
+  if (itype.eq.itype_channel_riblet.and.iforces_riblet.eq.1) then
+     call init_forces_riblet()
   endif
 
   !####################################################################
@@ -266,6 +271,11 @@ subroutine init_xcompact3d()
         open(38,file='forces.dat',form='formatted')
      endif
   endif
+  if(itype==itype_channel_riblet) then
+	  if(nrank.eq.0) then
+		  open(138,file='forces.dat',form='formatted')
+	  end if
+  end if
 
 endsubroutine init_xcompact3d
 !########################################################################
