@@ -547,7 +547,7 @@ contains
 
        call momentum_forcing_channel(dux1, duy1, duz1, ux1, uy1, uz1)
 
-    elseif (itype.eq.itype_channel) then
+    elseif (itype.eq.itype_channel_riblet) then
 
        call momentum_forcing_channel_riblet(dux1, duy1, duz1, ux1, uy1, uz1)
 

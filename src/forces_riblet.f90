@@ -184,7 +184,7 @@ contains
   xDrag_coeff = two*xnu*(dudyw_normal_int+dudzw_normal_int)/(two/three)**2
   
   if(nrank.eq.0) then
-!	  write(*,*) t,xDrag_coeff
+    if(mod(itime,ilist).eq.0) write(*,*) t,xDrag_coeff
 	  write(138,*)t,xDrag_coeff
 	  call flush(138)
   end if
