@@ -148,7 +148,7 @@ contains
   end subroutine init_channel_riblet
   !############################################################################
   !############################################################################
-  subroutine boundary_conditions_channel_riblet (ux,uy,uz,phi)
+  subroutine boundary_conditions_channel_riblet (ux,uy,uz,phi,ep1)
 
     use param
     use var, only : di2
@@ -157,9 +157,13 @@ contains
 
     implicit none
 
-    real(mytype),dimension(xsize(1),xsize(2),xsize(3)) :: ux,uy,uz
+    real(mytype),dimension(xsize(1),xsize(2),xsize(3)) :: ux,uy,uz,ep1
     real(mytype),dimension(xsize(1),xsize(2),xsize(3),numscalar) :: phi
 
+    ux = ux*(one-ep1)
+	uy = uy*(one-ep1)
+	uz = uz*(one-ep1)
+	
     if (.not. cpg ) then ! if not constant pressure gradient
        if (idir_stream == 1) then
           call channel_riblet_cfr(ux,two/three)

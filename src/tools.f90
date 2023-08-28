@@ -93,11 +93,11 @@ contains
     real(mytype),dimension(xsize(1),xsize(2),xsize(3)) :: ux,uy,uz
     real(mytype),dimension(6) :: umaxin, umaxout
 
-!    if (iibm > 0) then
-!       ux(:,:,:) = (one - ep1(:,:,:)) * ux(:,:,:)
-!       uy(:,:,:) = (one - ep1(:,:,:)) * uy(:,:,:)
-!       uz(:,:,:) = (one - ep1(:,:,:)) * uz(:,:,:)
-!    endif
+    if (iibm > 0) then
+       ux(:,:,:) = (one - ep1(:,:,:)) * ux(:,:,:)
+       uy(:,:,:) = (one - ep1(:,:,:)) * uy(:,:,:)
+       uz(:,:,:) = (one - ep1(:,:,:)) * uz(:,:,:)
+    endif
 
     uxmax=-1609.;uymax=-1609.;uzmax=-1609.;uxmin=1609.;uymin=1609.;uzmin=1609.
     !

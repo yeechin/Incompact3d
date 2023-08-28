@@ -179,7 +179,7 @@ contains
 	   
     elseif (itype.eq.itype_channel_riblet) then
 
-        call boundary_conditions_channel_riblet (ux, uy, uz, phi)
+        call boundary_conditions_channel_riblet (ux, uy, uz, phi,ep)
 
     elseif (itype.eq.itype_hill) then
 
