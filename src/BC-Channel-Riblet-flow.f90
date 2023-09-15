@@ -487,6 +487,24 @@ contains
 		end do
 	end do
 	else if(type_riblet.eq.2) then ! for triangular riblets
+		do k =nzi, nzf
+			zm = real(k-1,mytype)*dz
+			zm = mod(zm, W_riblet)
+			y_bump = abs(W_riblet*zpfive - zm)
+			dune(k) = y_bump*two*gamma_riblet
+		enddo
+		do i=nxi,nxf
+			do j=nyi,nyf
+				ym=yp(j)
+				do k=nzi,nzf
+					! both the lower wall and upper wall have riblet
+					if((ym-dune(k).le.zeromach).or.(ym-yly+dune(k).ge.-zeromach)) then
+						epsi(i,j,k)=remp
+					endif
+				end do
+			end do
+		end do
+		
 	endif
     return
   end subroutine geomcomplex_channel_riblet
