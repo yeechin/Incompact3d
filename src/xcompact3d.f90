@@ -271,6 +271,11 @@ subroutine init_xcompact3d()
         open(38,file='forces.dat',form='formatted')
      endif
   endif
+  if (itype==itype_channel) then
+	  if(nrank.eq.0) then
+		  open(238,file='forces.dat',form='formatted')
+	  end if
+  end if
   if(itype==itype_channel_riblet) then
 	  if(nrank.eq.0) then
 		  open(138,file='forces.dat',form='formatted')

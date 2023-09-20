@@ -327,8 +327,10 @@ contains
 
     use forces
 	use forces_riblet
+	use channel, only : force_channel
     use var, only : nzmsize
     use param, only : npress
+
 
     real(mytype),dimension(xsize(1),xsize(2),xsize(3)) :: ux,uy,uz
     real(mytype),dimension(xsize(1),xsize(2),xsize(3),numscalar) :: phi
@@ -402,6 +404,9 @@ contains
        call force(ux,uy,ep)
        call restart_forces(1)
     endif
+	if (itype.eq.itype_channel) then
+		call force_channel(ux)
+	end if
 	if(itype.eq.itype_channel_riblet.and.iforces_riblet.eq.1)then
 		call force_riblet(ux,ep)
 	endif

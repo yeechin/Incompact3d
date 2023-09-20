@@ -17,7 +17,7 @@ module channel
   PRIVATE ! All functions/subroutines private by default
   PUBLIC :: init_channel, boundary_conditions_channel, postprocess_channel, &
             visu_channel, visu_channel_init, momentum_forcing_channel, &
-            geomcomplex_channel, critR
+            geomcomplex_channel, critR, force_channel
 
 contains
   !############################################################################
@@ -676,4 +676,81 @@ contains
 
   end subroutine sem_init_channel
   !############################################################################
+  subroutine force_channel(ux1)
+
+    USE param
+    USE variables
+    USE decomp_2d
+    USE MPI
+    USE ibm_param
+	
+    implicit none
+    character(len=30) :: filename, filename2
+!    integer :: nzmsize
+!    integer                                             :: i, iv, j, k, kk, code, jj
+!    integer                                             :: nvect1,nvect2,nvect3
+
+    real(mytype), dimension(xsize(1),xsize(2),xsize(3)),intent(in) :: ux1
+
+!    real(mytype), dimension(ysize(1),ysize(2),ysize(3)) :: ppi2
+
+!    real(mytype), dimension(nz) :: yLift,xDrag
+!    real(mytype) :: yLift_mean,xDrag_mean
+
+!    real(mytype), dimension(ny-1) :: del_y
+
+!    real(mytype), dimension(nz) :: tunstxl, tunstyl
+!    real(mytype), dimension(nz) :: tconvxl,tconvyl
+!    real(mytype), dimension(nz) :: tpresxl,tpresyl
+!    real(mytype), dimension(nz) :: tdiffxl,tdiffyl
+
+!    real(mytype), dimension(nz) :: tunstx, tunsty
+!    real(mytype), dimension(nz) :: tconvx,tconvy
+!    real(mytype), dimension(nz) :: tpresx,tpresy
+!    real(mytype), dimension(nz) :: tdiffx,tdiffy
+
+!    real(mytype) :: uxmid,uymid,prmid
+!    real(mytype) :: dudxmid,dudymid,dvdxmid,dvdymid
+!    real(mytype) :: fac,tsumx,tsumy
+!    real(mytype) :: fcvx,fcvy,fprx,fpry,fdix,fdiy
+!    real(mytype) :: xmom,ymom
+	
+    integer       ::i,j,k
+	integer :: code
+	real(mytype), dimension(ny) :: umean_channel !streamwise and riblet-wise average of u
+	real(mytype), dimension(ny) :: umean_channel_recv !receive buffer
+	
+	real(mytype)    ::dudyw, deltay
+	real(mytype)    ::xDrag_coeff
+	
+	umean_channel=zero
+	umean_channel_recv=zero
+	do j=1,xsize(2)
+		do k=1,xsize(3)
+			do i=1,xsize(1)
+				umean_channel(xstart(2)-1+j)=umean_channel(xstart(2)-1+j)+ux1(i,j,k)/nx/nz
+			end do
+		end do
+	end do
+	call MPI_ALLREDUCE(umean_channel,umean_channel_recv,ny,real_type,MPI_SUM,MPI_COMM_WORLD,code)
+	
+	deltay = yp(2)-yp(1)
+	dudyw = zpfive*((umean_channel_recv(2)-umean_channel_recv(1))/deltay +      &
+	        (umean_channel_recv(ny-1)-umean_channel_recv(ny))/deltay)
+
+  xDrag_coeff = two*xnu*dudyw/(two/three)**2
+  
+  if(nrank.eq.0) then
+    if(mod(itime,ilist).eq.0) write(*,*) t,xDrag_coeff
+	  write(238,*)t,xDrag_coeff
+	  call flush(238)
+  end if
+  if(mod(itime,icheckpoint).eq.0)then
+	  if(nrank.eq.0) then
+		  write(filename,"('forces.dat',I7.7)") itime
+		  call system("cp forces.dat " //filename)
+	  end if
+  end if
+  return
+  end subroutine force_channel
 end module channel
