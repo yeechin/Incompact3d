@@ -235,6 +235,7 @@ contains
     call write_field(ux1, ".", "ux", num)
     call write_field(uy1, ".", "uy", num)
     call write_field(uz1, ".", "uz", num)
+!	call write_field(ep1, ".", "ep", num,.true.,flush=.true.)
 
     ! Interpolate pressure
     !WORK Z-PENCILS

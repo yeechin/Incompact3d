@@ -15,7 +15,7 @@ module tbl
   character(len=1),parameter :: NL=char(10) !new line character
 
   PRIVATE ! All functions/subroutines private by default
-  PUBLIC :: init_tbl, boundary_conditions_tbl, postprocess_tbl, visu_tbl, visu_tbl_init
+  PUBLIC :: init_tbl, boundary_conditions_tbl, postprocess_tbl, visu_tbl, visu_tbl_init, geomcomplex_tbl
 
 contains
 
@@ -71,10 +71,123 @@ contains
     return
   end subroutine init_tbl
   !********************************************************************
+  subroutine geomcomplex_tbl(epsi,nxi,nxf,ny,nyi,nyf,nzi,nzf,dx,yp,dz,remp)
+
+    use decomp_2d, only : mytype
+    use param, only : one, two, ten, five
+    use ibm_param
+    use dbg_schemes, only: sqrt_prec
+	use mpi
+
+
+    implicit none
+
+    integer                    :: nxi,nxf,ny,nyi,nyf,nzi,nzf
+    real(mytype),dimension(nxi:nxf,nyi:nyf,nzi:nzf) :: epsi
+    real(mytype),dimension(ny) :: yp
+    real(mytype)               :: dx, dz
+    real(mytype)               :: remp
+    integer                    :: i,j,k,code,ierror
+    real(mytype)               :: xm,ym,zm,r,cent
+    real(mytype)               :: zeromach
+    real(mytype)               :: cexx,ceyy,dist_axi
+	real(mytype)               :: dy
+	integer :: num
+	real(mytype):: epsum, epsum_recv
+	
+	
+	real(mytype),dimension(nxi:nxf,nzi:nzf) :: yup, ydown ! up and down boudnaries of the mushroom
+	
+	real(mytype)               :: r1mush, r2mush, hmush, smush! parameters for the mushroom shape
+	! r1mush, the radious of the head; r2mush, the radious of the pillar; hmush, height of the pillar
+	! smush, the size length of the squre that one mushroom shape covered
+
+
+    zeromach=one
+    do while ((one + zeromach / two) .gt. one)
+       zeromach = zeromach/two
+    end do
+    zeromach = ten*zeromach
+
+    ! Intitialise epsi
+    epsi(:,:,:)=zero
+	
+	yup(:,:)=zero
+	ydown(:,:)=zero
+	
+	r1mush=real(0.35,mytype); r2mush=real(0.15,mytype)
+	hmush=real(0.875,mytype); smush=real(1.0,mytype) ! need to be changed if the shape of mushroom to be changed
+	cent = smush/two
+	
+	!if (istret.eq.0) dy =yp(2)-yp(1) ! has to do something for y stretching
+
+    ! Define adjusted smoothing constant
+!    kcon = log((one-0.0001)/0.0001)/(smoopar*0.5*dx) ! 0.0001 is the y-value, smoopar: desired number of affected points 
+!
+    do k=nzi,nzf
+       do i=nxi,nxf
+           xm=real(i-1,mytype)*dx
+		   zm=real(k-1,mytype)*dz
+	  if(xm/smush.gt.one) then
+		   xm=mod(xm,smush)
+		   zm=mod(zm,smush)
+		   r=sqrt_prec((xm-cent)**two+(zm-cent)**two)
+		   if(r-r1mush.lt.zeromach) then
+			   yup(i,k)=hmush+sqrt_prec(r1mush**two-r**two)
+			   if(r-r2mush.gt.zeromach) then
+				   ydown(i,k)=hmush
+			   else
+				   ydown(i,k)=zero
+			   end if
+		   end if
+	   else
+		   r=sqrt_prec((xm-cent)**two+(zm-five*cent)**2) ! five need to be changed, if the spanwise length changed
+		   if(r-r2mush.lt.zeromach) then
+			   yup(i,k)=-ten*zeromach
+			   ydown(i,k)=ten*zeromach
+		   end if
+	   end if
+       enddo
+    enddo
+	
+	do j=nyi,nyf
+		ym=yp(j)
+		do k=nzi,nzf
+			do i=nxi,nxf
+				if(ym-ydown(i,k).ge.-zeromach.and.ym-yup(i,k).le.zeromach)then
+				!if(ym-yup(i,k).le.zeromach)then
+					epsi(i,j,k)=remp
+				else if (ym.ge.-zeromach.and.ym.le.zeromach) then
+					xm=real(i-1,mytype)*dx
+					if(xm/smush.gt.one) then
+						epsi(i,j,k)=remp
+					end if
+				end if
+			end do
+		end do
+	end do
+	
+!	epsum =zero
+!	do i=nxi,nxf
+!		do j=nyi,nyf
+!			do k=nzi,nzf
+!				epsum = epsum + epsi(i,j,k)
+!			end do
+!		end do
+!	end do
+!	call MPI_ALLREDUCE(epsum,epsum_recv,1,real_type,MPI_SUM,MPI_COMM_WORLD,ierror)	
+!	if(nrank==0)write(*,*) "number of solid points inside the flow domain ", epsum_recv	
+	
+!		call write_field(epsi, ".", "ep", 12, flush = .true.)
+!	call MPI_ABORT(MPI_COMM_WORLD,code,ierror); stop
+
+    return
+  end subroutine geomcomplex_tbl
   subroutine boundary_conditions_tbl (ux,uy,uz,phi)
 
     use navier, only : tbl_flrt
-    use param , only : zero, zptwofive
+    use param , only : zero, zpfive
+	use var, only : ep1
 
     implicit none
 
@@ -89,6 +202,9 @@ contains
     !INFLOW with an update of bxx1, byy1 and bzz1 at the inlet
 
     call blasius()
+    ux = ux*(one-ep1)
+	uy = uy*(one-ep1)
+	uz = uz*(one-ep1)
     !INLET FOR SCALAR, TO BE CONSISTENT WITH INITIAL CONDITION
     if (iscalar==1) then
        do k=1,xsize(3)
@@ -131,7 +247,7 @@ contains
       do k = 1, xsize(3)
         do i = 1, xsize(1)
           byx1(i, k) = zero
-          byy1(i, k) = zero
+          byy1(i, k) =  one !zpfive ! need to be changed for other eject velocity
           byz1(i, k) = zero
         enddo
       enddo
@@ -345,6 +461,7 @@ contains
     use var, ONLY : nxmsize, nymsize, nzmsize
     use visu, only : write_field
     use ibm_param, only : ubcx,ubcy,ubcz
+	use channel_riblet, only: visu_channel_riblet
 
     implicit none
 
@@ -366,39 +483,42 @@ contains
       call transpose_y_to_z(uz2,uz3)
       sync_vel_needed = .false.
     endif
+	
+	call visu_channel_riblet(ux1,uy1,uz1,pp3,phi1,ep1,num)
+
 
     !x-derivatives
-    call derx (ta1,ux1,di1,sx,ffx,fsx,fwx,xsize(1),xsize(2),xsize(3),0,ubcx)
-    call derx (tb1,uy1,di1,sx,ffxp,fsxp,fwxp,xsize(1),xsize(2),xsize(3),1,ubcy)
-    call derx (tc1,uz1,di1,sx,ffxp,fsxp,fwxp,xsize(1),xsize(2),xsize(3),1,ubcz)
+    !call derx (ta1,ux1,di1,sx,ffx,fsx,fwx,xsize(1),xsize(2),xsize(3),0,ubcx)
+    !call derx (tb1,uy1,di1,sx,ffxp,fsxp,fwxp,xsize(1),xsize(2),xsize(3),1,ubcy)
+    !call derx (tc1,uz1,di1,sx,ffxp,fsxp,fwxp,xsize(1),xsize(2),xsize(3),1,ubcz)
     !y-derivatives
-    call dery (ta2,ux2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1,ubcx)
-    call dery (tb2,uy2,di2,sy,ffy,fsy,fwy,ppy,ysize(1),ysize(2),ysize(3),0,ubcy)
-    call dery (tc2,uz2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1,ubcz)
+    !call dery (ta2,ux2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1,ubcx)
+    !call dery (tb2,uy2,di2,sy,ffy,fsy,fwy,ppy,ysize(1),ysize(2),ysize(3),0,ubcy)
+    !call dery (tc2,uz2,di2,sy,ffyp,fsyp,fwyp,ppy,ysize(1),ysize(2),ysize(3),1,ubcz)
     !!z-derivatives
-    call derz (ta3,ux3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1,ubcx)
-    call derz (tb3,uy3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1,ubcy)
-    call derz (tc3,uz3,di3,sz,ffz,fsz,fwz,zsize(1),zsize(2),zsize(3),0,ubcz)
+    !call derz (ta3,ux3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1,ubcx)
+    !call derz (tb3,uy3,di3,sz,ffzp,fszp,fwzp,zsize(1),zsize(2),zsize(3),1,ubcy)
+    !call derz (tc3,uz3,di3,sz,ffz,fsz,fwz,zsize(1),zsize(2),zsize(3),0,ubcz)
     !!all back to x-pencils
-    call transpose_z_to_y(ta3,td2)
-    call transpose_z_to_y(tb3,te2)
-    call transpose_z_to_y(tc3,tf2)
-    call transpose_y_to_x(td2,tg1)
-    call transpose_y_to_x(te2,th1)
-    call transpose_y_to_x(tf2,ti1)
-    call transpose_y_to_x(ta2,td1)
-    call transpose_y_to_x(tb2,te1)
-    call transpose_y_to_x(tc2,tf1)
+    !call transpose_z_to_y(ta3,td2)
+    !call transpose_z_to_y(tb3,te2)
+    !call transpose_z_to_y(tc3,tf2)
+    !call transpose_y_to_x(td2,tg1)
+    !call transpose_y_to_x(te2,th1)
+    !call transpose_y_to_x(tf2,ti1)
+    !call transpose_y_to_x(ta2,td1)
+    !call transpose_y_to_x(tb2,te1)
+    !call transpose_y_to_x(tc2,tf1)
     !du/dx=ta1 du/dy=td1 and du/dz=tg1
     !dv/dx=tb1 dv/dy=te1 and dv/dz=th1
     !dw/dx=tc1 dw/dy=tf1 and dw/dz=ti1
 
     !VORTICITY FIELD
-    di1 = zero
-    di1(:,:,:)=sqrt(  (tf1(:,:,:)-th1(:,:,:))**2 &
-                    + (tg1(:,:,:)-tc1(:,:,:))**2 &
-                    + (tb1(:,:,:)-td1(:,:,:))**2)
-    call write_field(di1, ".", "vort", num, flush=.true.) ! Reusing temporary array, force flush
+    !di1 = zero
+    !di1(:,:,:)=sqrt(  (tf1(:,:,:)-th1(:,:,:))**2 &
+    !                + (tg1(:,:,:)-tc1(:,:,:))**2 &
+     !               + (tb1(:,:,:)-td1(:,:,:))**2)
+    !call write_field(di1, ".", "vort", num, flush=.true.) ! Reusing temporary array, force flush
 
   end subroutine visu_tbl
 
