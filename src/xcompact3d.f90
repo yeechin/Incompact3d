@@ -81,7 +81,8 @@ program xcompact3d
 
      call simu_stats(3)
 	 if (itime.ge.initstat) then ! Statistics of Liutex vector
-     if (itype.eq.itype_channel.or.itype.eq.itype_channel_riblet) then
+     if (itype.eq.itype_channel.or.itype.eq.itype_channel_riblet.or.itype.eq.itype_hill.or.itype.eq.itype_cyl) then
+		 ! Liutex statistics for channel, channel riblets, periodic hill and cylinder flow
        call update_liutex_channel(ux1,uy1,uz1)
      endif
      endif

@@ -7,6 +7,7 @@ module cyl
   USE decomp_2d
   USE variables
   USE param
+  USE channel, only: critR
 
   IMPLICIT NONE
 
@@ -331,6 +332,7 @@ contains
     use var, ONLY : nxmsize, nymsize, nzmsize
     use visu, only : write_field
     use ibm_param, only : ubcx,ubcy,ubcz
+	use var, only : Rx1,Ry1,Rz1
 
     implicit none
 
@@ -339,6 +341,8 @@ contains
     real(mytype), intent(in), dimension(xsize(1),xsize(2),xsize(3),numscalar) :: phi1
     real(mytype), intent(in), dimension(xsize(1),xsize(2),xsize(3)) :: ep1
     integer, intent(in) :: num
+	
+	integer :: i,j,k
 
     ! Write vorticity as an example of post processing
 
@@ -392,6 +396,20 @@ contains
                   - tg1(:,:,:)*tc1(:,:,:) &
                   - th1(:,:,:)*tf1(:,:,:)
     call write_field(di1, ".", "critq", num, flush = .true.) ! Reusing temporary array, force flush
+    Rx1 = zero; Ry1 = zero; Rz1 = zero
+    do k=1,xsize(3)
+      do j=1,xsize(2)
+        do i=1,xsize(1)
+          call critR(ta1(i,j,k),td1(i,j,k),tg1(i,j,k),     &
+                     tb1(i,j,k),te1(i,j,k),th1(i,j,k),     &
+                     tc1(i,j,k),tf1(i,j,k),ti1(i,j,k),     &
+                     Rx1(i,j,k),Ry1(i,j,k),Rz1(i,j,k))
+         enddo
+       enddo
+     enddo
+     call write_field(Rx1, ".", "Rx", num)
+     call write_field(Ry1, ".", "Ry", num)
+     call write_field(Rz1, ".", "Rz", num)
 
   end subroutine visu_cyl
 
